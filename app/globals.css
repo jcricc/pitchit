@@ -1,0 +1,40 @@
+/* globals.css */
+
+/* Set your base, components, and utilities here */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Define your color variables */
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 10, 30, 40; /* Dark blue */
+  --background-end-rgb: 0, 0, 50; /* Dark blue */
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+/* Apply colors to body */
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(var(--background-end-rgb), .4) /* Low transparency */
+  )
+  rgb(var(--background-start-rgb));
+}
+
+/* Custom utility class */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
