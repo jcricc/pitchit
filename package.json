@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 192.168.0.22 -p 3001",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@svgr/webpack": "^8.1.0",
+    "@vis.gl/react-google-maps": "^1.1.0",
+    "axios": "^1.7.2",
+    "file-saver": "^2.0.5",
     "next": "14.2.4",
     "react": "^18",
     "react-dom": "^18"
