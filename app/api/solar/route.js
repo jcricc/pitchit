@@ -32,17 +32,16 @@ export async function GET(req) {
       statisticalArea: data.statisticalArea,
       regionCode: data.regionCode,
       solarPotential: {
-        maxArrayPanelsCount: data.solarPotential.maxArrayPanelsCount,
-        maxArrayAreaMeters2: data.solarPotential.maxArrayAreaMeters2,
-        maxSunshineHoursPerYear: data.solarPotential.maxSunshineHoursPerYear,
         carbonOffsetFactorKgPerMwh: data.solarPotential.carbonOffsetFactorKgPerMwh,
-        wholeRoofStats: data.solarPotential.wholeRoofStats,
+        wholeRoofStats: {
+          areaMeters2: data.solarPotential.wholeRoofStats.areaMeters2,
+          groundAreaMeters2: data.solarPotential.wholeRoofStats.groundAreaMeters2,
+        },
         roofSegmentStats: data.solarPotential.roofSegmentStats.map(segment => ({
           pitchDegrees: segment.pitchDegrees,
           azimuthDegrees: segment.azimuthDegrees,
           stats: {
             areaMeters2: segment.stats.areaMeters2,
-            sunshineQuantiles: segment.stats.sunshineQuantiles,
             groundAreaMeters2: segment.stats.groundAreaMeters2,
           },
         })),
@@ -55,4 +54,5 @@ export async function GET(req) {
     return NextResponse.json({ error: 'Failed to fetch solar data' }, { status: 500 });
   }
 }
+
 

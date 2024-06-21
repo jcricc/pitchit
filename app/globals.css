@@ -7,18 +7,9 @@
 
 /* Define your color variables */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 10, 30, 40; /* Dark blue */
-  --background-end-rgb: 0, 0, 50; /* Dark blue */
-}
-
-/* Dark mode styles */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 5, 20, 30; /* Darker blue */
+  --background-end-rgb: 5, 20, 30; /* Darker blue */
 }
 
 /* Apply colors to body */
@@ -28,7 +19,7 @@ body {
     to bottom,
     transparent,
     rgba(var(--background-end-rgb), .4) /* Low transparency */
-  )
+  ),
   rgb(var(--background-start-rgb));
 }
 

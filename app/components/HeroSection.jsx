@@ -61,6 +61,8 @@ const HeroSection = () => {
         const location = geocodeResponse.data.results[0].geometry.location;
         setCoordinates(location);
 
+        console.log('Requesting solar data for coordinates:', location);
+
         const solarResponse = await axios.get('/api/solar', {
           params: {
             lat: location.lat,
@@ -83,12 +85,12 @@ const HeroSection = () => {
 
   return (
     <section className="hero-section bg-cover bg-center" style={{ backgroundImage: 'url(/main.svg)' }}>
-      <div className="container mx-auto text-center py-20">
-        <h1 className="text-blue-500 text-6xl font-bold">Let's get started.</h1>
+      <div className="container mx-auto text-center py-20 text-white">
+        <h1 className="text-blue-400 text-6xl font-bold">Let's get started.</h1>
         <p className="text-gray-300 text-2xl mt-4">
           Enter the address or coordinates of a structure you'd like to measure.
         </p>
-        <div className="mt-8 flex justify-center space-x-4" id="place-picker-box">
+        <div className="mt-4 flex justify-center space-x-4" id="place-picker-box">
           <div id="place-picker-container" className="w-80 text-left">
             <input
               ref={inputRef}
@@ -103,17 +105,44 @@ const HeroSection = () => {
           >
             SEARCH ADDRESS
           </button>
-          <button
-            className="py-2 px-6 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition duration-300"
-            onClick={handleUploadBlueprint}
-          >
-            UPLOAD BLUEPRINT
-          </button>
         </div>
         {solarData && (
-          <div className="mt-4 p-4 border border-gray-500 rounded-md bg-white text-black">
-            <h2 className="text-xl font-semibold">Solar Data Results:</h2>
-            <pre>{JSON.stringify(solarData, null, 2)}</pre>
+          <div className="mt-12 p-8 border border-gray-500 rounded-md bg-white text-black shadow-lg max-w-4xl mx-auto relative">
+            <h2 className="text-2xl font-semibold mt-8 text-center">Roof Measurement Results</h2>
+            <Image
+              src="/assets/PitchItLogo.png"
+              alt="Logo"
+              width={250}
+              height={250}
+              className="absolute top-[-2rem] right-[-2rem]"
+            />
+            <div className="w-full text-left space-y-8 mt-24">
+              <div className="flex flex-col items-center">
+                <p className="text-center"><span className="font-semibold">Location:</span> {address}</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <p className="text-center"><span className="font-semibold">Coordinates:</span> Latitude: {coordinates.lat}, Longitude: {coordinates.lng}</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <h3 className="text-lg font-bold">Whole Roof Stats:</h3>
+                <div className="pl-4">
+                  <p className="text-center"><span className="font-semibold">Area (m²):</span> {solarData.solarPotential.wholeRoofStats.areaMeters2}</p>
+                  <p className="text-center"><span className="font-semibold">Ground Area (m²):</span> {solarData.solarPotential.wholeRoofStats.groundAreaMeters2}</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <h3 className="text-lg font-bold">Roof Segment Stats:</h3>
+                {solarData.solarPotential.roofSegmentStats.map((segment, index) => (
+                  <div key={index} className="pl-4 mb-4 text-center">
+                    <h4 className="text-md font-semibold">Segment {index + 1}:</h4>
+                    <p><span className="font-semibold">Pitch Degrees:</span> {segment.pitchDegrees}</p>
+                    <p><span className="font-semibold">Azimuth Degrees:</span> {segment.azimuthDegrees}</p>
+                    <p><span className="font-semibold">Area (m²):</span> {segment.stats.areaMeters2}</p>
+                    <p><span className="font-semibold">Ground Area (m²):</span> {segment.stats.groundAreaMeters2}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
         <Image
@@ -121,7 +150,7 @@ const HeroSection = () => {
           alt="Report"
           width={578}
           height={558}
-          className="mx-auto mt-12 border border-black rounded-md"
+          className="mx-auto mt-6 border border-black rounded-md"
         />
       </div>
     </section>

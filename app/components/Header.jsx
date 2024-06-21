@@ -14,8 +14,7 @@ const Header = () => (
     </div>
     <div className="flex items-center space-x-6">
       <a href="#login" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Log In</a>
-      <a href="#create-account" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Create An Account</a>
-      <button className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 transition duration-300">START ORDER</button>
+      <a href="#create-account" className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 transition duration-300">Create An Account</a>
       <span className="text-gray-700 font-semibold text-lg">1-877-697-2673</span>
     </div>
   </header>
