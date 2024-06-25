@@ -5,7 +5,6 @@ const AccuracyGuaranteeSection = () => (
   <section className="accuracy-section py-20 bg-gray-100">
     <div className="container mx-auto text-center">
       <div className="flex justify-center items-center">
-        <Image src="/assets/CorelogicLogoSvg.svg" alt="Accuracy Guarantee" width={79} height={79} />
         <div className="ml-10">
           <h2 className="text-5xl font-bold text-gray-800 mb-4">99% Accuracy Guarantee</h2>
           <p className="text-lg text-gray-600">

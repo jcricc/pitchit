@@ -7,7 +7,7 @@ const Footer = () => (
       <div className="flex justify-between">
         <div>
           <Image src="/assets/PitchItLogoCopy.png" alt="Logo" width={255} height={164} />
-          <p className="mt-4 text-gray-400">Saving Contractors time & Money</p>
+          <p className="mt-4 text-gray-400">Saving Contractors Time & Money</p>
         </div>
         <div>
           <h4 className="text-lg font-bold">About Us</h4>
@@ -38,7 +38,7 @@ const Footer = () => (
         </div>
         <div>
           <h4 className="text-lg font-bold">Follow Us</h4>
-          <p className="mt-4 text-gray-400">1-877-697-2673</p>
+          <p className="mt-4 text-gray-400">1-800-677-2491</p>
           <p className="text-gray-400">370 17th Street 50th Floor, Denver, CO 80202</p>
         </div>
       </div>

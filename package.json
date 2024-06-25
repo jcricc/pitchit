@@ -13,9 +13,11 @@
     "@vis.gl/react-google-maps": "^1.1.0",
     "axios": "^1.7.2",
     "file-saver": "^2.0.5",
+    "mapbox-gl": "^3.4.0",
     "next": "14.2.4",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-map-gl": "^7.1.7"
   },
   "devDependencies": {
     "eslint": "^8",

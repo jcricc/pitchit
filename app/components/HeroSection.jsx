@@ -3,11 +3,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
+import styles from './HeroSection.module.css';
 
 const HeroSection = () => {
   const [address, setAddress] = useState('');
   const [coordinates, setCoordinates] = useState(null);
   const [solarData, setSolarData] = useState(null);
+  const [aerialImageUrl, setAerialImageUrl] = useState('');
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -70,7 +72,15 @@ const HeroSection = () => {
           }
         });
 
-        setSolarData(solarResponse.data);
+        if (solarResponse.data && solarResponse.data.solarPotential && solarResponse.data.solarPotential.roofSegmentStats) {
+          setSolarData(solarResponse.data);
+
+          // Generate Static Map URL with increased size and zoom level
+          const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=700x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+          setAerialImageUrl(staticMapUrl);
+        } else {
+          console.error('Invalid data format received from solar API');
+        }
       } else {
         console.error('Geocoding API error:', geocodeResponse.data.status);
       }
@@ -83,9 +93,34 @@ const HeroSection = () => {
     console.log('Upload blueprint clicked');
   };
 
+  const calculateRoofSquares = (areaMeters2) => {
+    const areaFeet2 = areaMeters2 * 10.7639;
+    return (areaFeet2 / 100).toFixed(2);
+  };
+
+  const calculatePitch = (pitchDegrees) => {
+    const slope = Math.tan(pitchDegrees * (Math.PI / 180));
+    const rise = slope * 12;
+    return Math.round(rise);
+  };
+
+  // Derive the run from the pitch instead of this
+  const calculateRafterLength = (pitchDegrees) => {
+    const rise = Math.tan(pitchDegrees * (Math.PI / 180));
+    const run = 1; // Assuming 1 foot run for simplicity
+    return Math.sqrt(run ** 2 + rise ** 2).toFixed(2);
+  };
+
+  const calculateMaterials = (squares) => {
+    const shinglesBundles = (squares * 3 * 1.1).toFixed(0); // Including 10% waste
+    const underlaymentRolls = (squares / 4).toFixed(0);
+    const nails = (squares * 320).toFixed(0);
+    return { shinglesBundles, underlaymentRolls, nails };
+  };
+
   return (
-    <section className="hero-section bg-cover bg-center" style={{ backgroundImage: 'url(/main.svg)' }}>
-      <div className="container mx-auto text-center py-20 text-white">
+    <section className={`${styles.heroSection} bg-cover bg-center py-20`}>
+      <div className={`${styles.container} text-center text-white`}>
         <h1 className="text-blue-400 text-6xl font-bold">Let's get started.</h1>
         <p className="text-gray-300 text-2xl mt-4">
           Enter the address or coordinates of a structure you'd like to measure.
@@ -96,11 +131,11 @@ const HeroSection = () => {
               ref={inputRef}
               type="text"
               placeholder="Enter Address"
-              className="input-address py-2 px-4 w-full border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-800 text-black"
+              className={`${styles.inputAddress} py-2 px-4 w-full border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-800 text-black`}
             />
           </div>
           <button
-            className="py-2 px-6 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition duration-300"
+            className={`${styles.button} py-2 px-6 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition duration-300`}
             onClick={handleGenerateReport}
           >
             SEARCH ADDRESS
@@ -108,7 +143,7 @@ const HeroSection = () => {
         </div>
         {solarData && (
           <div className="mt-12 p-8 border border-gray-500 rounded-md bg-white text-black shadow-lg max-w-4xl mx-auto relative">
-            <h2 className="text-2xl font-semibold mt-8 text-center">Roof Measurement Results</h2>
+            <h2 className="text-2xl font-semibold text-center">Roof Measurement Results</h2>
             <Image
               src="/assets/PitchItLogo.png"
               alt="Logo"
@@ -116,32 +151,116 @@ const HeroSection = () => {
               height={250}
               className="absolute top-[-2rem] right-[-2rem]"
             />
-            <div className="w-full text-left space-y-8 mt-24">
-              <div className="flex flex-col items-center">
-                <p className="text-center"><span className="font-semibold">Location:</span> {address}</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <p className="text-center"><span className="font-semibold">Coordinates:</span> Latitude: {coordinates.lat}, Longitude: {coordinates.lng}</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <h3 className="text-lg font-bold">Whole Roof Stats:</h3>
-                <div className="pl-4">
-                  <p className="text-center"><span className="font-semibold">Area (m²):</span> {solarData.solarPotential.wholeRoofStats.areaMeters2}</p>
-                  <p className="text-center"><span className="font-semibold">Ground Area (m²):</span> {solarData.solarPotential.wholeRoofStats.groundAreaMeters2}</p>
+            <div className={styles.locationBox}>
+              <p className="text-lg font-semibold">{address}</p>
+            </div>
+            <p className={styles.coordinates}>Latitude: {coordinates.lat}, Longitude: {coordinates.lng}</p>
+            <div className="w-full text-left space-y-8 mt-8">
+              {solarData.solarPotential.wholeRoofStats && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold">Whole Roof Stats</h3>
+                  <table className={styles.table}>
+                    <thead className={styles.thead}>
+                      <tr>
+                        <th className={styles.th}>Roof</th>
+                        <th className={styles.th}>Total Area (m²)</th>
+                        <th className={styles.th}>Ground Area (m²)</th>
+                        <th className={styles.th}>Total Squares</th>
+                        <th className={styles.th}>Pitch</th>
+                        <th className={styles.th}># Facets</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className={styles.td}>#1</td>
+                        <td className={styles.td}>{solarData.solarPotential.wholeRoofStats.areaMeters2}</td>
+                        <td className={styles.td}>{solarData.solarPotential.wholeRoofStats.groundAreaMeters2}</td>
+                        <td className={styles.td}>{calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
+                        <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
+                        <td className={styles.td}>{solarData.solarPotential.roofSegmentStats.length}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-              <div className="flex flex-col items-center">
-                <h3 className="text-lg font-bold">Roof Segment Stats:</h3>
-                {solarData.solarPotential.roofSegmentStats.map((segment, index) => (
-                  <div key={index} className="pl-4 mb-4 text-center">
-                    <h4 className="text-md font-semibold">Segment {index + 1}:</h4>
-                    <p><span className="font-semibold">Pitch Degrees:</span> {segment.pitchDegrees}</p>
-                    <p><span className="font-semibold">Azimuth Degrees:</span> {segment.azimuthDegrees}</p>
-                    <p><span className="font-semibold">Area (m²):</span> {segment.stats.areaMeters2}</p>
-                    <p><span className="font-semibold">Ground Area (m²):</span> {segment.stats.groundAreaMeters2}</p>
-                  </div>
-                ))}
-              </div>
+              )}
+              {solarData.solarPotential.roofSegmentStats[0] && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold">Main Roof Segment Stats</h3>
+                  <table className={styles.table}>
+                    <thead className={styles.thead}>
+                      <tr>
+                        <th className={styles.th}>Metric</th>
+                        <th className={styles.th}>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className={styles.td}>Pitch</td>
+                        <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
+                      </tr>
+                      <tr>
+                        <td className={styles.td}>Area (m²)</td>
+                        <td className={styles.td}>{solarData.solarPotential.roofSegmentStats[0].stats.areaMeters2}</td>
+                      </tr>
+                      <tr>
+                        <td className={styles.td}>Ground Area (m²)</td>
+                        <td className={styles.td}>{solarData.solarPotential.roofSegmentStats[0].stats.groundAreaMeters2}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {solarData.solarPotential.wholeRoofStats && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold">Materials Estimation</h3>
+                  <table className={styles.table}>
+                    <thead className={styles.thead}>
+                      <tr>
+                        <th className={styles.th}>Material</th>
+                        <th className={styles.th}>Quantity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const squares = calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2);
+                        const materials = calculateMaterials(squares);
+                        return (
+                          <>
+                            <tr>
+                              <td className={styles.td}>Shingles Needed</td>
+                              <td className={styles.td}>{materials.shinglesBundles} bundles</td>
+                            </tr>
+                            <tr>
+                              <td className={styles.td}>Underlayment Needed</td>
+                              <td className={styles.td}>{materials.underlaymentRolls} rolls</td>
+                            </tr>
+                            <tr>
+                              <td className={styles.td}>Total Nails</td>
+                              <td className={styles.td}>{materials.nails} nails</td>
+                            </tr>
+                            <tr>
+                              <td className={styles.td}>Rafter Length</td>
+                              <td className={styles.td}>{calculateRafterLength(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)} feet</td>
+                            </tr>
+                          </>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="mt-8 text-center">
+              <h3 className="text-lg font-bold">Aerial Image</h3>
+              {aerialImageUrl && (
+                <Image
+                  src={aerialImageUrl}
+                  alt="Aerial Image"
+                  width={800}
+                  height={800}
+                  className="mx-auto border border-black rounded-md"
+                />
+              )}
             </div>
           </div>
         )}
