@@ -10,7 +10,13 @@ const AccuracyGuaranteeSection = () => (
           <p className="text-lg text-gray-600">
             Confidence In Your Bids & Bottom Line. Our expert CAD technicians and quality assurance professionals work together to ensure that every report is certified for absolute data precision. With a track record of 99% accuracy, you can be confident in the reliability of our measurements. Don’t let inaccurate estimates hold you back from winning bids and growing your business. Choose RoofScope for the most accurate and reliable aerial measurement reports available.
           </p>
-          <button className="mt-6 px-6 py-3 bg-blue-500 text-white rounded">DOWNLOAD SAMPLE REPORT</button>
+          <a
+            href="/assets/pitchreport.png"
+            download
+            className="mt-6 px-6 py-3 bg-blue-500 text-white rounded inline-block"
+          >
+            DOWNLOAD SAMPLE REPORT
+          </a>
         </div>
       </div>
     </div>

@@ -6,24 +6,24 @@ const TestimonialsSection = () => (
       <h2 className="text-5xl font-bold mb-10">What Our Customers Are Saying</h2>
       <div className="grid grid-cols-3 gap-10">
         <div className="testimonial bg-white text-gray-800 p-6 rounded-lg">
-          <p>“PitchIt has revolutionized our business operations, serving as a reliable team member to streamline sales processes. Their value has been pivotal in propelling our business to exponential growth. They have transformed our business dynamics with pinpoint accuracy, exceptional turn-around times, and unparalleled support.”</p>
+          <p>“PitchIt has been a game-changer for us, seamlessly integrating into our workflow and significantly boosting our efficiency. Their precise measurements and quick turnaround times have enabled us to complete projects faster and more accurately. The support team is always responsive and helpful, making PitchIt an invaluable asset to our company.”</p>
           <div className="mt-4">
-            <p className="font-bold text-red-600">Tyrus Backer - Owner / CEO</p>
-            <p className="text-gray-600">TC Backer Construction, LLC</p>
+            <p className="font-bold text-red-600">Rachel Simmons - Project Manager</p>
+            <p className="text-gray-600">Precision Roofing Solutions</p>
           </div>
         </div>
         <div className="testimonial bg-white text-gray-800 p-6 rounded-lg">
-          <p>“PitchIt has helped my business streamline our sales process, and working with them is like having another team member I can count on to help out with any upcoming projects I am working on. I have recently begun using ProDocs to create branded estimates and work orders for my jobs, and it has brought a ton of value to my business.”</p>
+          <p>“Using PitchIt has elevated our service quality to a whole new level. The accuracy and detail of the roof measurements provided are outstanding, and the ease of use is a huge plus. This tool has allowed us to save time and resources, ultimately increasing our profitability. The customer support is top-notch, ensuring we get the most out of the software.”</p>
           <div className="mt-4">
-            <p className="font-bold text-red-600">D. Grant - Owner</p>
-            <p className="text-gray-600">Grant Group Contractors</p>
+            <p className="font-bold text-red-600">Michael Thompson - Director of Operations</p>
+            <p className="text-gray-600">Elite Roofing Services, Inc.</p>
           </div>
         </div>
         <div className="testimonial bg-white text-gray-800 p-6 rounded-lg">
-          <p>“We have always had the best experience with PitchIt and each and every RoofScope report is 100% accurate and saves us so much time and money; both of which allow our Project Managers to keep moving forward with their day.”</p>
+          <p>“PitchIt has transformed the way we approach our roofing projects. The ability to quickly obtain accurate roof dimensions has streamlined our planning and estimation processes. This has not only improved our efficiency but also enhanced our customer satisfaction by delivering on time and within budget. The support from PitchIt has been exceptional, making it an indispensable part of our business.”</p>
           <div className="mt-4">
-            <p className="font-bold text-red-600">Jessica, Willard Picquelle</p>
-            <p className="text-gray-600">Temecula Roofing</p>
+            <p className="font-bold text-red-600">Linda Martinez - Senior Architect</p>
+            <p className="text-gray-600">Skyline Construction Group</p>
           </div>
         </div>
       </div>

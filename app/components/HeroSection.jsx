@@ -93,6 +93,10 @@ const HeroSection = () => {
     console.log('Upload blueprint clicked');
   };
 
+  const convertMetersToFeet = (areaMeters2) => {
+    return (areaMeters2 * 10.7639).toFixed(2);
+  };
+
   const calculateRoofSquares = (areaMeters2) => {
     const areaFeet2 = areaMeters2 * 10.7639;
     return (areaFeet2 / 100).toFixed(2);
@@ -104,10 +108,10 @@ const HeroSection = () => {
     return Math.round(rise);
   };
 
-  // Derive the run from the pitch instead of this
-  const calculateRafterLength = (pitchDegrees) => {
-    const rise = Math.tan(pitchDegrees * (Math.PI / 180));
-    const run = 1; // Assuming 1 foot run for simplicity
+  const calculateRafterLength = (pitchDegrees, groundAreaMeters2, widthMeters) => {
+    const slope = Math.tan(pitchDegrees * (Math.PI / 180));
+    const run = groundAreaMeters2 / widthMeters; // Derive the run from ground area and known width
+    const rise = slope * run;
     return Math.sqrt(run ** 2 + rise ** 2).toFixed(2);
   };
 
@@ -163,8 +167,8 @@ const HeroSection = () => {
                     <thead className={styles.thead}>
                       <tr>
                         <th className={styles.th}>Roof</th>
-                        <th className={styles.th}>Total Area (m²)</th>
-                        <th className={styles.th}>Ground Area (m²)</th>
+                        <th className={styles.th}>Total Area (ft²)</th>
+                        <th className={styles.th}>Ground Area (ft²)</th>
                         <th className={styles.th}>Total Squares</th>
                         <th className={styles.th}>Pitch</th>
                         <th className={styles.th}># Facets</th>
@@ -173,8 +177,8 @@ const HeroSection = () => {
                     <tbody>
                       <tr>
                         <td className={styles.td}>#1</td>
-                        <td className={styles.td}>{solarData.solarPotential.wholeRoofStats.areaMeters2}</td>
-                        <td className={styles.td}>{solarData.solarPotential.wholeRoofStats.groundAreaMeters2}</td>
+                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
+                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.wholeRoofStats.groundAreaMeters2)}</td>
                         <td className={styles.td}>{calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
                         <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
                         <td className={styles.td}>{solarData.solarPotential.roofSegmentStats.length}</td>
@@ -199,12 +203,12 @@ const HeroSection = () => {
                         <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
                       </tr>
                       <tr>
-                        <td className={styles.td}>Area (m²)</td>
-                        <td className={styles.td}>{solarData.solarPotential.roofSegmentStats[0].stats.areaMeters2}</td>
+                        <td className={styles.td}>Area (ft²)</td>
+                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.roofSegmentStats[0].stats.areaMeters2)}</td>
                       </tr>
                       <tr>
-                        <td className={styles.td}>Ground Area (m²)</td>
-                        <td className={styles.td}>{solarData.solarPotential.roofSegmentStats[0].stats.groundAreaMeters2}</td>
+                        <td className={styles.td}>Ground Area (ft²)</td>
+                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.roofSegmentStats[0].stats.groundAreaMeters2)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -224,6 +228,11 @@ const HeroSection = () => {
                       {(() => {
                         const squares = calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2);
                         const materials = calculateMaterials(squares);
+                        const rafterLength = calculateRafterLength(
+                          solarData.solarPotential.roofSegmentStats[0].pitchDegrees,
+                          solarData.solarPotential.roofSegmentStats[0].stats.areaMeters2,
+                          solarData.solarPotential.roofSegmentStats[0].stats.groundAreaMeters2
+                        );
                         return (
                           <>
                             <tr>
@@ -240,7 +249,7 @@ const HeroSection = () => {
                             </tr>
                             <tr>
                               <td className={styles.td}>Rafter Length</td>
-                              <td className={styles.td}>{calculateRafterLength(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)} feet</td>
+                              <td className={styles.td}>{rafterLength} feet</td>
                             </tr>
                           </>
                         );

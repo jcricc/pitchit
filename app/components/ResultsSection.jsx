@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const ResultsSection = () => (
   <section className="results-section py-20 bg-gray-100">
@@ -8,15 +9,15 @@ const ResultsSection = () => (
         <div className="text-left">
           <h2 className="text-5xl font-bold text-gray-800 mb-4">Results In Minutes!</h2>
           <p className="text-lg text-gray-600">
-            Use ScopeApp to collect field data quickly so that you can provide your customers accurate estimates and reduce costly material overages. Watch the explainer video to see how it works or download it from the App Store or Google Play and start scoping!
+            Use PitchIt to collect field data quickly so that you can provide your customers accurate estimates and reduce costly material overages. Watch the explainer video to see how it works or download it from the App Store or Google Play and start scoping!
           </p>
-          <button className="mt-6 px-6 py-3 bg-blue-500 text-white rounded">WATCH THE VIDEO</button>
+          <Link href="/#hero-section" legacyBehavior>
+            <a className="mt-6 px-6 py-3 bg-blue-500 text-white rounded inline-block">Get Results!</a>
+          </Link>
           <div className="flex justify-center mt-6">
-            <Image src="/assets/prodocs2468-png.png" alt="App Store" width={128} height={64} />
-            <Image src="/assets/prodocs2468-png.png" alt="Google Play" width={128} height={64} />
+            <Image src="/assets/thumbnail.png" alt="App Store" width={350} height={350} />
           </div>
         </div>
-        <Image src="/assets/prodocs2468-png.png" alt="Phone App" width={164} height={328} />
       </div>
     </div>
   </section>

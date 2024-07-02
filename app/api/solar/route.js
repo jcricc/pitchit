@@ -1,5 +1,3 @@
-// app/api/solar/route.js
-
 import axios from 'axios';
 import { NextResponse } from 'next/server';
 
@@ -40,6 +38,8 @@ export async function GET(req) {
         roofSegmentStats: data.solarPotential.roofSegmentStats.map(segment => ({
           pitchDegrees: segment.pitchDegrees,
           azimuthDegrees: segment.azimuthDegrees,
+          rooftopCenter: segment.rooftopCenter,
+          boundingBox: segment.boundingBox, // Ensure boundingBox is included
           stats: {
             areaMeters2: segment.stats.areaMeters2,
             groundAreaMeters2: segment.stats.groundAreaMeters2,
@@ -54,5 +54,3 @@ export async function GET(req) {
     return NextResponse.json({ error: 'Failed to fetch solar data' }, { status: 500 });
   }
 }
-
-

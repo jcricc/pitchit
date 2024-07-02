@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const WhyPitchItSection = () => (
   <section className="why-pitchit-section py-20 bg-gray-100">
@@ -11,7 +12,9 @@ const WhyPitchItSection = () => (
           <p className="text-lg text-gray-600">
             With a 99% accuracy rate and 12 hours or less turnaround time guarantees, PitchIt aerial measurement reports save you time and the hassles of having to re-measure a roof, recalculate data or hand-draft aerial takeoff reports.
           </p>
-          <button className="mt-6 px-6 py-3 bg-blue-500 text-white rounded">Try Now</button>
+          <Link href="/#hero-section">
+            <button className="mt-6 px-6 py-3 bg-blue-500 text-white rounded">Try Now</button>
+          </Link>
         </div>
       </div>
     </div>
