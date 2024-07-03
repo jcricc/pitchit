@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { LoadScript, Autocomplete } from '@react-google-maps/api';
 import axios from 'axios';
 import Image from 'next/image';
 import styles from './EstimatorSection.module.css';
+import { useAuth } from '../hooks/useAuth';
 
 const libraries = ['places'];
 const defaultCenter = { lat: 39.8283, lng: -98.5795 };
 
 const EstimatorSection = () => {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [address, setAddress] = useState('');
   const [coordinates, setCoordinates] = useState(defaultCenter);
@@ -17,7 +19,25 @@ const EstimatorSection = () => {
   const [roofData, setRoofData] = useState(null);
   const [material, setMaterial] = useState('asphalt');
   const [pricePerSqFt, setPricePerSqFt] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
   const autocompleteRef = useRef(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchPricingData();
+    }
+  }, [user]);
+
+  const fetchPricingData = async () => {
+    try {
+      const response = await axios.get(`/api/pricing?companyId=${user.uid}`);
+      setPricePerSqFt(response.data.asphaltPrice); // Default to asphalt price
+    } catch (error) {
+      console.error('Error fetching pricing data:', error);
+    }
+  };
 
   const geocodeAddress = async (address) => {
     try {
@@ -87,7 +107,28 @@ const EstimatorSection = () => {
 
   const handlePriceChange = (e) => {
     const value = e.target.value.replace(/[^\d.]/g, ''); // Allow only numbers and decimal point
-    setPricePerSqFt(value ? `$${value}` : '');
+    setPricePerSqFt(value ? value : '');
+  };
+
+  const handleSubmission = async () => {
+    const totalCost = calculateTotalCost(roofData.areaMeters2, parseFloat(pricePerSqFt));
+    try {
+      await axios.post('/api/submissions', {
+        companyId: user.uid,
+        address,
+        coordinates,
+        material,
+        pricePerSqFt: parseFloat(pricePerSqFt),
+        totalCost,
+        email,
+        phone,
+        name,
+      });
+      alert('Submission received successfully!');
+    } catch (error) {
+      console.error('Error submitting data:', error);
+      alert('Failed to submit data!');
+    }
   };
 
   const nextStep = () => setStep(step + 1);
@@ -208,12 +249,52 @@ const EstimatorSection = () => {
             </div>
           </div>
         )}
-        {step === 5 && roofData && (
+        {step === 5 && (
+          <div>
+            <h2 className={styles.subtitle}>Enter Your Contact Information</h2>
+            <input
+              type="text"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`${styles.inputAddress} mb-4`}
+            />
+            <input
+              type="text"
+              placeholder="Enter your phone number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={`${styles.inputAddress} mb-4`}
+            />
+            <input
+              type="text"
+              placeholder="Enter your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={`${styles.inputAddress} mb-4`}
+            />
+            <div className={styles.buttonGroup}>
+              <button onClick={prevStep} className={styles.buttonSecondary}>
+                Previous
+              </button>
+              <button
+                onClick={async () => {
+                  await handleSubmission();
+                  nextStep();
+                }}
+                className={styles.button}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        )}
+        {step === 6 && roofData && (
           <div>
             <h2 className={styles.subtitle}>Estimated Cost</h2>
             <p>Total Roof Area: {roofData.areaMeters2} m²</p>
             <p>Price per Square Foot: {pricePerSqFt}</p>
-            <p>Total Cost: ${calculateTotalCost(roofData.areaMeters2, parseFloat(pricePerSqFt.replace('$', '')))}</p>
+            <p>Total Cost: ${calculateTotalCost(roofData.areaMeters2, parseFloat(pricePerSqFt))}</p>
             <div className={styles.buttonGroup}>
               <button onClick={prevStep} className={styles.buttonSecondary}>
                 Previous
@@ -227,5 +308,3 @@ const EstimatorSection = () => {
 };
 
 export default EstimatorSection;
-
-
