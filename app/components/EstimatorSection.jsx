@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { LoadScript, Autocomplete } from '@react-google-maps/api';
+import { Autocomplete } from '@react-google-maps/api';
 import axios from 'axios';
 import Image from 'next/image';
 import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../firebaseConfig';
+import { loadGoogleMapsScript } from '../utils/loadGoogleMapsScript';
 import styles from './EstimatorSection.module.css';
 
-const libraries = ['places'];
 const defaultCenter = { lat: 39.8283, lng: -98.5795 };
 
 const EstimatorSection = () => {
@@ -88,23 +88,31 @@ const EstimatorSection = () => {
     fetchPrice();
   }, [fetchPrice]);
 
-  const onPlaceChanged = async () => {
-    if (autocompleteRef.current !== null) {
-      const place = autocompleteRef.current.getPlace();
-      if (place.geometry) {
-        const location = place.geometry.location;
-        const newCoordinates = { lat: location.lat(), lng: location.lng() };
-        setCoordinates(newCoordinates);
-        setAddress(place.formatted_address);
+  useEffect(() => {
+    loadGoogleMapsScript().then(() => {
+      if (autocompleteRef.current) {
+        const autocomplete = new google.maps.places.Autocomplete(autocompleteRef.current, {
+          fields: ['geometry', 'name', 'formatted_address'],
+        });
 
-        const roofData = await fetchRooftopData(newCoordinates);
-        setRoofData(roofData);
+        autocomplete.addListener('place_changed', async () => {
+          const place = autocomplete.getPlace();
+          if (place.geometry) {
+            const location = place.geometry.location;
+            const newCoordinates = { lat: location.lat(), lng: location.lng() };
+            setCoordinates(newCoordinates);
+            setAddress(place.formatted_address);
 
-        const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${newCoordinates.lat},${newCoordinates.lng}&zoom=19&size=600x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-        setStaticMapUrl(mapUrl);
+            const roofData = await fetchRooftopData(newCoordinates);
+            setRoofData(roofData);
+
+            const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${newCoordinates.lat},${newCoordinates.lng}&zoom=19&size=600x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+            setStaticMapUrl(mapUrl);
+          }
+        });
       }
-    }
-  };
+    }).catch(error => console.error('Error loading Google Maps script:', error));
+  }, []);
 
   const calculateTotalCost = () => {
     const areaSqFt = roofData.areaMeters2 * 10.7639;
@@ -145,21 +153,12 @@ const EstimatorSection = () => {
         <h1 className={styles.title}>Instant Roof Estimate</h1>
         {step === 1 && (
           <div>
-            <LoadScript
-              googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-              libraries={libraries}
-            >
-              <Autocomplete
-                onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
-                onPlaceChanged={onPlaceChanged}
-              >
-                <input
-                  type="text"
-                  placeholder="Enter your address"
-                  className={`${styles.inputAddress} mb-4`}
-                />
-              </Autocomplete>
-            </LoadScript>
+            <input
+              ref={autocompleteRef}
+              type="text"
+              placeholder="Enter your address"
+              className={`${styles.inputAddress} mb-4`}
+            />
             <button onClick={nextStep} className={styles.button}>
               Next
             </button>

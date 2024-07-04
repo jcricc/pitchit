@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
+import { loadGoogleMapsScript } from '../utils/loadGoogleMapsScript';
 import styles from './HeroSection.module.css';
 
 const HeroSection = () => {
@@ -13,36 +14,24 @@ const HeroSection = () => {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const loadScript = () => {
-      if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
+    loadGoogleMapsScript().then(() => {
+      if (inputRef.current) {
+        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+          fields: ['geometry', 'name', 'formatted_address'],
+        });
 
-        script.onload = () => {
-          if (inputRef.current) {
-            const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-              fields: ['geometry', 'name', 'formatted_address']
-            });
-
-            autocomplete.addListener('place_changed', () => {
-              const place = autocomplete.getPlace();
-              if (place && place.formatted_address) {
-                setAddress(place.formatted_address);
-                setCoordinates({
-                  lat: place.geometry.location.lat(),
-                  lng: place.geometry.location.lng()
-                });
-              }
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          if (place && place.formatted_address) {
+            setAddress(place.formatted_address);
+            setCoordinates({
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
             });
           }
-        };
+        });
       }
-    };
-
-    loadScript();
+    }).catch(error => console.error('Error loading Google Maps script:', error));
   }, []);
 
   const handleGenerateReport = async () => {
@@ -55,27 +44,24 @@ const HeroSection = () => {
       const geocodeResponse = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json`, {
         params: {
           address: address,
-          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-        }
+          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+        },
       });
 
       if (geocodeResponse.data.status === 'OK') {
         const location = geocodeResponse.data.results[0].geometry.location;
         setCoordinates(location);
 
-        console.log('Requesting solar data for coordinates:', location);
-
         const solarResponse = await axios.get('/api/solar', {
           params: {
             lat: location.lat,
-            lng: location.lng
-          }
+            lng: location.lng,
+          },
         });
 
         if (solarResponse.data && solarResponse.data.solarPotential && solarResponse.data.solarPotential.roofSegmentStats) {
           setSolarData(solarResponse.data);
 
-          // Generate Static Map URL with increased size and zoom level
           const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=700x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
           setAerialImageUrl(staticMapUrl);
         } else {
@@ -89,38 +75,20 @@ const HeroSection = () => {
     }
   };
 
-  const handleUploadBlueprint = () => {
-    console.log('Upload blueprint clicked');
-  };
-
-  const convertMetersToFeet = (areaMeters2) => {
-    return (areaMeters2 * 10.7639).toFixed(2);
-  };
-
-  const calculateRoofSquares = (areaMeters2) => {
-    const areaFeet2 = areaMeters2 * 10.7639;
-    return (areaFeet2 / 100).toFixed(2);
-  };
-
-  const calculatePitch = (pitchDegrees) => {
-    const slope = Math.tan(pitchDegrees * (Math.PI / 180));
-    const rise = slope * 12;
-    return Math.round(rise);
-  };
-
+  const convertMetersToFeet = (areaMeters2) => (areaMeters2 * 10.7639).toFixed(2);
+  const calculateRoofSquares = (areaMeters2) => (areaMeters2 * 10.7639 / 100).toFixed(2);
+  const calculatePitch = (pitchDegrees) => Math.round(Math.tan(pitchDegrees * (Math.PI / 180)) * 12);
   const calculateRafterLength = (pitchDegrees, groundAreaMeters2, widthMeters) => {
     const slope = Math.tan(pitchDegrees * (Math.PI / 180));
-    const run = groundAreaMeters2 / widthMeters; // Derive the run from ground area and known width
+    const run = groundAreaMeters2 / widthMeters;
     const rise = slope * run;
     return Math.sqrt(run ** 2 + rise ** 2).toFixed(2);
   };
-
-  const calculateMaterials = (squares) => {
-    const shinglesBundles = (squares * 3 * 1.1).toFixed(0); // Including 10% waste
-    const underlaymentRolls = (squares / 4).toFixed(0);
-    const nails = (squares * 320).toFixed(0);
-    return { shinglesBundles, underlaymentRolls, nails };
-  };
+  const calculateMaterials = (squares) => ({
+    shinglesBundles: (squares * 3 * 1.1).toFixed(0),
+    underlaymentRolls: (squares / 4).toFixed(0),
+    nails: (squares * 320).toFixed(0),
+  });
 
   return (
     <section className={`${styles.heroSection} bg-cover bg-center py-20`}>
