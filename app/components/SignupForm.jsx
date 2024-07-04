@@ -1,18 +1,19 @@
+// app/components/SignupForm.jsx
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { useRouter } from 'next/navigation'; // Corrected import for app directory
 import { auth, db } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 const SignupForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+  const router = useRouter(); // Correct use of useRouter
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,11 +21,17 @@ const SignupForm = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save company name to Firestore
+      // Create the company document
       await setDoc(doc(db, 'companies', user.uid), {
-        companyName,
         email,
+        companyName,
+        uid: user.uid,
       });
+
+      // Create the pricing and submissions sub-collections
+      await setDoc(doc(db, `companies/${user.uid}/pricing/asphalt`), { price: 0 });
+      await setDoc(doc(db, `companies/${user.uid}/pricing/metal`), { price: 0 });
+      await setDoc(doc(db, `companies/${user.uid}/submissions/initial`), {});
 
       router.push('/admin');
     } catch (error) {
@@ -35,16 +42,20 @@ const SignupForm = () => {
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
 
-      // Save company name to Firestore if it's a new user
-      if (result.additionalUserInfo.isNewUser) {
-        await setDoc(doc(db, 'companies', user.uid), {
-          companyName: result.user.displayName, // Assuming the display name is the company name
-          email: user.email,
-        });
-      }
+      // Create the company document
+      await setDoc(doc(db, 'companies', user.uid), {
+        email: user.email,
+        companyName: user.displayName,
+        uid: user.uid,
+      });
+
+      // Create the pricing and submissions sub-collections
+      await setDoc(doc(db, `companies/${user.uid}/pricing/asphalt`), { price: 0 });
+      await setDoc(doc(db, `companies/${user.uid}/pricing/metal`), { price: 0 });
+      await setDoc(doc(db, `companies/${user.uid}/submissions/initial`), {});
 
       router.push('/admin');
     } catch (error) {
@@ -58,18 +69,6 @@ const SignupForm = () => {
         <h2 className="text-2xl font-bold text-center">Sign Up</h2>
         {error && <p className="text-red-500">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">Company Name</label>
-            <input
-              id="companyName"
-              name="companyName"
-              type="text"
-              required
-              className="w-full px-3 py-2 mt-1 border rounded text-black"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-            />
-          </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
             <input
@@ -92,6 +91,18 @@ const SignupForm = () => {
               className="w-full px-3 py-2 mt-1 border rounded text-black"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">Company Name</label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              required
+              className="w-full px-3 py-2 mt-1 border rounded text-black"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
             />
           </div>
           <div>

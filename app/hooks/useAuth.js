@@ -1,7 +1,8 @@
+// hooks/useAuth.js
 "use client";
 
 import { useState, useEffect, useContext, createContext } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 
 const AuthContext = createContext();
@@ -30,13 +31,7 @@ function useProvideAuth() {
     return () => unsubscribe();
   }, []);
 
-  const logout = async () => {
-    await signOut(auth);
-    setUser(null);
-  };
-
   return {
     user,
-    logout,
   };
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LoadScript, Autocomplete } from '@react-google-maps/api';
 import axios from 'axios';
 import Image from 'next/image';
-import styles from './EstimatorSection.module.css';
+import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
+import { db } from '../firebaseConfig';
+import styles from './EstimatorSection.module.css';
 
 const libraries = ['places'];
 const defaultCenter = { lat: 39.8283, lng: -98.5795 };
@@ -18,26 +20,12 @@ const EstimatorSection = () => {
   const [staticMapUrl, setStaticMapUrl] = useState('');
   const [roofData, setRoofData] = useState(null);
   const [material, setMaterial] = useState('asphalt');
-  const [pricePerSqFt, setPricePerSqFt] = useState('');
+  const [pitch, setPitch] = useState('low');
+  const [price, setPrice] = useState(null);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [name, setName] = useState('');
   const autocompleteRef = useRef(null);
-
-  useEffect(() => {
-    if (user) {
-      fetchPricingData();
-    }
-  }, [user]);
-
-  const fetchPricingData = async () => {
-    try {
-      const response = await axios.get(`/api/pricing?companyId=${user.uid}`);
-      setPricePerSqFt(response.data.asphaltPrice); // Default to asphalt price
-    } catch (error) {
-      console.error('Error fetching pricing data:', error);
-    }
-  };
 
   const geocodeAddress = async (address) => {
     try {
@@ -82,6 +70,24 @@ const EstimatorSection = () => {
     }
   };
 
+  const fetchPrice = useCallback(async () => {
+    if (user) {
+      const docRef = doc(db, `companies/${user.uid}/pricing`, material);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const pricingData = docSnap.data();
+        setPrice(pricingData[pitch]);
+      } else {
+        console.log('No such document!');
+      }
+    }
+  }, [user, material, pitch]);
+
+  useEffect(() => {
+    fetchPrice();
+  }, [fetchPrice]);
+
   const onPlaceChanged = async () => {
     if (autocompleteRef.current !== null) {
       const place = autocompleteRef.current.getPlace();
@@ -100,34 +106,33 @@ const EstimatorSection = () => {
     }
   };
 
-  const calculateTotalCost = (areaMeters2, pricePerSqFt) => {
-    const areaSqFt = areaMeters2 * 10.7639;
-    return (areaSqFt * pricePerSqFt).toFixed(2);
-  };
-
-  const handlePriceChange = (e) => {
-    const value = e.target.value.replace(/[^\d.]/g, ''); // Allow only numbers and decimal point
-    setPricePerSqFt(value ? value : '');
+  const calculateTotalCost = () => {
+    const areaSqFt = roofData.areaMeters2 * 10.7639;
+    return (areaSqFt * price).toFixed(2);
   };
 
   const handleSubmission = async () => {
-    const totalCost = calculateTotalCost(roofData.areaMeters2, parseFloat(pricePerSqFt));
+    const areaSqFt = roofData.areaMeters2 * 10.7639;
+    const submission = {
+      address,
+      coordinates,
+      material,
+      pitch,
+      price,
+      areaSqFt,
+      totalCost: calculateTotalCost(),
+      email,
+      phone,
+      name,
+    };
+
     try {
-      await axios.post('/api/submissions', {
-        companyId: user.uid,
-        address,
-        coordinates,
-        material,
-        pricePerSqFt: parseFloat(pricePerSqFt),
-        totalCost,
-        email,
-        phone,
-        name,
-      });
-      alert('Submission received successfully!');
+      await addDoc(collection(db, `companies/${user.uid}/submissions`), submission);
+      alert('Submission saved successfully!');
+      setStep(5); // Move to the next step to display the estimate
     } catch (error) {
-      console.error('Error submitting data:', error);
-      alert('Failed to submit data!');
+      console.error('Error saving submission:', error);
+      alert('Failed to save submission!');
     }
   };
 
@@ -217,6 +222,42 @@ const EstimatorSection = () => {
                 />
               </label>
             </div>
+            <h2 className={styles.subtitle}>Select Roof Pitch</h2>
+            <div className={`${styles.radioGroup} mb-4`}>
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="pitch"
+                  value="low"
+                  checked={pitch === 'low'}
+                  onChange={(e) => setPitch(e.target.value)}
+                  className={styles.radioInput}
+                />
+                Low (0-6/12)
+              </label>
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="pitch"
+                  value="medium"
+                  checked={pitch === 'medium'}
+                  onChange={(e) => setPitch(e.target.value)}
+                  className={styles.radioInput}
+                />
+                Medium (7-10/12)
+              </label>
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="pitch"
+                  value="steep"
+                  checked={pitch === 'steep'}
+                  onChange={(e) => setPitch(e.target.value)}
+                  className={styles.radioInput}
+                />
+                Steep (11-12/12)
+              </label>
+            </div>
             <div className={styles.buttonGroup}>
               <button onClick={prevStep} className={styles.buttonSecondary}>
                 Previous
@@ -229,13 +270,27 @@ const EstimatorSection = () => {
         )}
         {step === 4 && (
           <div>
-            <h2 className={styles.subtitle}>Set Price per Square Foot</h2>
-            <div className={styles.priceInputContainer}>
+            <h2 className={styles.subtitle}>Enter Your Information</h2>
+            <div className={styles.inputGroup}>
               <input
                 type="text"
-                placeholder="Enter price per square foot"
-                value={pricePerSqFt}
-                onChange={handlePriceChange}
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={`${styles.inputAddress} mb-4`}
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`${styles.inputAddress} mb-4`}
+              />
+              <input
+                type="tel"
+                placeholder="Phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className={`${styles.inputAddress} mb-4`}
               />
             </div>
@@ -249,55 +304,18 @@ const EstimatorSection = () => {
             </div>
           </div>
         )}
-        {step === 5 && (
-          <div>
-            <h2 className={styles.subtitle}>Enter Your Contact Information</h2>
-            <input
-              type="text"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={`${styles.inputAddress} mb-4`}
-            />
-            <input
-              type="text"
-              placeholder="Enter your phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={`${styles.inputAddress} mb-4`}
-            />
-            <input
-              type="text"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`${styles.inputAddress} mb-4`}
-            />
-            <div className={styles.buttonGroup}>
-              <button onClick={prevStep} className={styles.buttonSecondary}>
-                Previous
-              </button>
-              <button
-                onClick={async () => {
-                  await handleSubmission();
-                  nextStep();
-                }}
-                className={styles.button}
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        )}
-        {step === 6 && roofData && (
+        {step === 5 && roofData && price && (
           <div>
             <h2 className={styles.subtitle}>Estimated Cost</h2>
-            <p>Total Roof Area: {roofData.areaMeters2} m²</p>
-            <p>Price per Square Foot: {pricePerSqFt}</p>
-            <p>Total Cost: ${calculateTotalCost(roofData.areaMeters2, parseFloat(pricePerSqFt))}</p>
+            <p>Total Roof Area: {(roofData.areaMeters2 * 10.7639).toFixed(2)} ft²</p>
+            <p>Price per Square Foot: ${price}</p>
+            <p>Total Cost: ${calculateTotalCost()}</p>
             <div className={styles.buttonGroup}>
               <button onClick={prevStep} className={styles.buttonSecondary}>
                 Previous
+              </button>
+              <button onClick={handleSubmission} className={styles.button}>
+                Submit
               </button>
             </div>
           </div>
