@@ -1,19 +1,18 @@
-// app/components/SignupForm.jsx
-"use client";
+'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { useRouter } from 'next/navigation'; // Corrected import for app directory
 import { auth, db } from '../firebaseConfig';
-import { doc, setDoc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { collection, doc, setDoc } from 'firebase/firestore';
 
 const SignupForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter(); // Correct use of useRouter
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,17 +20,25 @@ const SignupForm = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Create the company document
+      // Create company document
       await setDoc(doc(db, 'companies', user.uid), {
-        email,
         companyName,
-        uid: user.uid,
+        email: user.email,
       });
 
-      // Create the pricing and submissions sub-collections
-      await setDoc(doc(db, `companies/${user.uid}/pricing/asphalt`), { price: 0 });
-      await setDoc(doc(db, `companies/${user.uid}/pricing/metal`), { price: 0 });
-      await setDoc(doc(db, `companies/${user.uid}/submissions/initial`), {});
+      // Create sub-collections for pricing and submissions
+      await setDoc(doc(db, 'companies', user.uid, 'pricing', 'asphalt'), {
+        low: 0,
+        medium: 0,
+        steep: 0,
+      });
+      await setDoc(doc(db, 'companies', user.uid, 'pricing', 'metal'), {
+        low: 0,
+        medium: 0,
+        steep: 0,
+      });
+
+      await setDoc(doc(db, 'companies', user.uid, 'submissions', 'initial'), {});
 
       router.push('/admin');
     } catch (error) {
@@ -45,17 +52,25 @@ const SignupForm = () => {
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
 
-      // Create the company document
+      // Create company document
       await setDoc(doc(db, 'companies', user.uid), {
+        companyName,
         email: user.email,
-        companyName: user.displayName,
-        uid: user.uid,
       });
 
-      // Create the pricing and submissions sub-collections
-      await setDoc(doc(db, `companies/${user.uid}/pricing/asphalt`), { price: 0 });
-      await setDoc(doc(db, `companies/${user.uid}/pricing/metal`), { price: 0 });
-      await setDoc(doc(db, `companies/${user.uid}/submissions/initial`), {});
+      // Create sub-collections for pricing and submissions
+      await setDoc(doc(db, 'companies', user.uid, 'pricing', 'asphalt'), {
+        low: 0,
+        medium: 0,
+        steep: 0,
+      });
+      await setDoc(doc(db, 'companies', user.uid, 'pricing', 'metal'), {
+        low: 0,
+        medium: 0,
+        steep: 0,
+      });
+
+      await setDoc(doc(db, 'companies', user.uid, 'submissions', 'initial'), {});
 
       router.push('/admin');
     } catch (error) {
@@ -112,10 +127,14 @@ const SignupForm = () => {
           </div>
         </form>
         <div className="text-center">
-          <button onClick={handleGoogleSignIn} className="flex items-center justify-center w-full h-12 px-4 py-2 mt-4 text-white bg-black rounded hover:bg-red-600">
-            <img src="/assets/Google.png" alt="Google" className="w-10 h-10 mr-2" />
-            Sign up with Google
-          </button>
+        <button onClick={handleGoogleSignIn} className="flex items-center justify-center w-full h-12 px-4 py-2 mt-4 text-white bg-black rounded hover:bg-red-600">
+          <Link href="/your-desired-path">
+            <a>
+              <image src="/assets/Google.png" alt="Google" width={40} height={40} />
+            </a>
+          </Link>
+          Sign up with Google
+        </button>
           <Link href="/login" className="block mt-4 text-blue-500 hover:underline">Already have an account? Log in</Link>
         </div>
       </div>

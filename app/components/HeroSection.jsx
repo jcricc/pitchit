@@ -125,9 +125,9 @@ const HeroSection = () => {
   return (
     <section className={`${styles.heroSection} bg-cover bg-center py-20`}>
       <div className={`${styles.container} text-center text-white`}>
-        <h1 className="text-blue-400 text-6xl font-bold">Let's get started.</h1>
+        <h1 className="text-blue-400 text-6xl font-bold">Let&apos;s get started.</h1>
         <p className="text-gray-300 text-2xl mt-4">
-          Enter the address or coordinates of a structure you'd like to measure.
+          Enter the address or coordinates of a structure you&apos;d like to measure.
         </p>
         <div className="mt-4 flex justify-center space-x-4" id="place-picker-box">
           <div id="place-picker-container" className="w-80 text-left">

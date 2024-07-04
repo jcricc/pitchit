@@ -168,7 +168,7 @@ const EstimatorSection = () => {
         {step === 2 && staticMapUrl && (
           <div>
             <div className={`${styles.mapContainer} mt-4`}>
-              <img src={staticMapUrl} alt="Selected location" className="mx-auto" />
+              <Image src={staticMapUrl} alt="Selected location" className="mx-auto" width={600} height={700} />
               <p>{address}</p>
             </div>
             <div className={styles.buttonGroup}>
