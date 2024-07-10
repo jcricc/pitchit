@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -25,7 +25,8 @@ const Header = () => {
         </Link>
         <nav className="flex space-x-6 mb-7">
           <Link href="/home" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Home</Link>
-          <a href="#pricing" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Pricing</a>
+          <Link href="/pricing" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Pricing</Link>
+          <Link href="/estimator" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Estimator</Link>
           <Link href="/admin" className="text-gray-700 hover:text-blue-500 text-lg transition duration-300">Admin Portal</Link>
         </nav>
       </div>

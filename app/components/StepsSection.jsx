@@ -6,11 +6,11 @@ import Svg1 from '../../public/assets/Svg1.svg';
 const StepsSection = () => (
   <section className="steps-section py-20 bg-gray-100">
     <div className="container mx-auto text-center">
-      <h2 className="text-5xl font-bold text-gray-800 mb-10">Roof Measurements in 3 easy steps</h2>
+      <h2 className="text-5xl font-bold text-gray-800 mb-10">Get Your Roof Measurements in 3 Easy Steps</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
         <div className="step text-black">
           <Svg className="mx-auto mb-4" />
-          <p>Simply enter the address of the structure you want to be measured and confirm the pin is in the correct spot.</p>
+          <p>Enter the address of the property you want to measure and confirm the location on the map.</p>
         </div>
         <div className="step text-black flex flex-col items-center">
           <div className="relative mb-2">
@@ -19,7 +19,7 @@ const StepsSection = () => (
         </div>
         <div className="step text-black">
           <Svg1 className="mx-auto mb-4" />
-          <p>Select the type(s) of report you need for your structure, then add them to your cart! That’s it, you’re done.</p>
+          <p>Choose the type of roofing material and pitch, then receive an instant estimate directly to your email!</p>
         </div>
       </div>
     </div>

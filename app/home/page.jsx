@@ -8,13 +8,11 @@ import TestimonialsSection from '../components/TestimonialsSection';
 import WhyPitchItSection from '../components/WhyPitchItSection';
 import CallToActionSection from '../components/CallToActionSection';
 import Footer from '../components/Footer';
-import EstimatorSection from '../components/EstimatorSection';
 
 const HomePage = () => (
   <div>
     <Header />
     <HeroSection />
-    <EstimatorSection />
     <StepsSection />
     <AccuracyGuaranteeSection />
     <ResultsSection />

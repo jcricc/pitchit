@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const Footer = () => (
   <footer className="footer-section py-20 bg-gray-800 text-white">
@@ -12,28 +13,25 @@ const Footer = () => (
         <div>
           <h4 className="text-lg font-bold">About Us</h4>
           <ul className="mt-2 space-y-2">
-            <li><a href="#who-we-are" className="text-gray-400">Who We Are</a></li>
-            <li><a href="#vision-mission" className="text-gray-400">Vision & Mission</a></li>
-            <li><a href="#core-values" className="text-gray-400">Core Values</a></li>
-            <li><a href="#quality-policy" className="text-gray-400">Quality Policy</a></li>
+            <li><Link href="/who-we-are" className="text-gray-400">Who We Are</Link></li>
+            <li><Link href="/vision-mission" className="text-gray-400">Vision & Mission</Link></li>
+            <li><Link href="/core-values" className="text-gray-400">Core Values</Link></li>
+            <li><Link href="/quality-policy" className="text-gray-400">Quality Policy</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="text-lg font-bold">Company</h4>
           <ul className="mt-2 space-y-2">
-            <li><a href="#blog" className="text-gray-400">Blog</a></li>
-            <li><a href="#partners" className="text-gray-400">Partners</a></li>
-            <li><a href="#careers" className="text-gray-400">Careers</a></li>
-            <li><a href="#privacy-policy" className="text-gray-400">Privacy Policy</a></li>
-            <li><a href="#terms-of-use" className="text-gray-400">Terms Of Use</a></li>
+            <li><Link href="/privacy-policy" className="text-gray-400">Privacy Policy</Link></li>
+            <li><Link href="/terms-of-use" className="text-gray-400">Terms Of Use</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="text-lg font-bold">Resources</h4>
           <ul className="mt-2 space-y-2">
-            <li><a href="#tutorials" className="text-gray-400">Tutorials</a></li>
-            <li><a href="#contact-us" className="text-gray-400">Contact Us</a></li>
-            <li><a href="#faq" className="text-gray-400">FAQ</a></li>
+            <li><Link href="/tutorials" className="text-gray-400">Tutorials</Link></li>
+            <li><Link href="/contact-us" className="text-gray-400">Contact Us</Link></li>
+            <li><Link href="/faq" className="text-gray-400">FAQ</Link></li>
           </ul>
         </div>
         <div>
