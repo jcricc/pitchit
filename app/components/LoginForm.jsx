@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPasswo
 import { auth, db } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
+import image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 const LoginForm = () => {
@@ -104,7 +105,7 @@ const LoginForm = () => {
         </form>
         <div className="text-center">
           <button onClick={handleGoogleSignIn} className="flex items-center justify-center w-full h-12 px-4 py-2 mt-4 text-white bg-black rounded hover:bg-red-600">
-            <img src="/assets/Google.png" alt="Google" className="w-10 h-10 mr-2" />
+            <image src="/assets/Google.png" alt="Google" className="w-10 h-10 mr-2" />
             Sign in with Google
           </button>
           <Link href="#" onClick={() => setIsSignUp(!isSignUp)} className="block mt-4 text-blue-500 hover:underline">

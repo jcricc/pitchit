@@ -7,7 +7,7 @@ const AccuracyGuaranteeSection = () => (
         <div className="ml-10">
           <h2 className="text-5xl font-bold text-gray-800 mb-4">99% Accuracy Guarantee</h2>
           <p className="text-lg text-gray-600">
-            At PitchIt, we understand the importance of precision in roofing measurements. Our expert CAD technicians and quality assurance professionals work together to ensure every report is certified for absolute data accuracy. With a proven track record of 99% accuracy, you can trust PitchIt to provide reliable measurements for your roofing projects. Don't let inaccurate estimates affect your bids or business growth. Choose PitchIt for the most accurate and dependable roofing measurement reports available.
+            At PitchIt, we understand the importance of precision in roofing measurements. Our expert CAD technicians and quality assurance professionals work together to ensure every report is certified for absolute data accuracy. With a proven track record of 99% accuracy, you can trust PitchIt to provide reliable measurements for your roofing projects. Don&apos;t let inaccurate estimates affect your bids or business growth. Choose PitchIt for the most accurate and dependable roofing measurement reports available.
           </p>
           <a
             href="/assets/pitchreport.png"
