@@ -20,7 +20,7 @@ const Tutorials = () => (
       </pre>
 
       <h3 className="text-2xl font-semibold mb-2">Step 2: Initialize the Component</h3>
-      <p className="text-lg text-gray-700 mb-4">
+      <p className="text-lg text-white mb-4">
         Add the following script to initialize the Estimator Section component:
       </p>
       <pre className="bg-gray-200 p-4 mb-4 text-black">

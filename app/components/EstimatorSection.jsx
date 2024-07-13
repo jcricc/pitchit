@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { LoadScript, Autocomplete } from '@react-google-maps/api';
 import axios from 'axios';
 import Image from 'next/image';
-import { doc, getDoc, addDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../firebaseConfig';
-import { loadGoogleMapsScript } from '../utils/loadGoogleMapsScript';
 import styles from './EstimatorSection.module.css';
 
+const libraries = ['places'];
 const defaultCenter = { lat: 39.8283, lng: -98.5795 };
 
 const EstimatorSection = () => {
@@ -24,19 +25,7 @@ const EstimatorSection = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [companies, setCompanies] = useState([]);
-  const [selectedCompany, setSelectedCompany] = useState(null);
   const autocompleteRef = useRef(null);
-
-  const [companyId, setCompanyId] = useState(null);
-
-  useEffect(() => {
-    const element = document.getElementById('estimator-section');
-    if (element) {
-      setCompanyId(element.dataset.companyId || selectedCompany);
-    }
-  }, [selectedCompany]);
-  
 
   const geocodeAddress = async (address) => {
     try {
@@ -82,8 +71,8 @@ const EstimatorSection = () => {
   };
 
   const fetchPrice = useCallback(async () => {
-    if (companyId) {
-      const docRef = doc(db, `companies/${companyId}/pricing`, material);
+    if (user) {
+      const docRef = doc(db, `companies/${user.uid}/pricing`, material);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -93,49 +82,29 @@ const EstimatorSection = () => {
         console.log('No such document!');
       }
     }
-  }, [companyId, material, pitch]);
+  }, [user, material, pitch]);
 
   useEffect(() => {
     fetchPrice();
   }, [fetchPrice]);
 
-  useEffect(() => {
-    loadGoogleMapsScript().then(() => {
-      if (autocompleteRef.current) {
-        const autocomplete = new google.maps.places.Autocomplete(autocompleteRef.current, {
-          fields: ['geometry', 'name', 'formatted_address'],
-        });
+  const onPlaceChanged = async () => {
+    if (autocompleteRef.current !== null) {
+      const place = autocompleteRef.current.getPlace();
+      if (place.geometry) {
+        const location = place.geometry.location;
+        const newCoordinates = { lat: location.lat(), lng: location.lng() };
+        setCoordinates(newCoordinates);
+        setAddress(place.formatted_address);
 
-        autocomplete.addListener('place_changed', async () => {
-          const place = autocomplete.getPlace();
-          if (place.geometry) {
-            const location = place.geometry.location;
-            const newCoordinates = { lat: location.lat(), lng: location.lng() };
-            setCoordinates(newCoordinates);
-            setAddress(place.formatted_address);
+        const roofData = await fetchRooftopData(newCoordinates);
+        setRoofData(roofData);
 
-            const roofData = await fetchRooftopData(newCoordinates);
-            setRoofData(roofData);
-
-            const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${newCoordinates.lat},${newCoordinates.lng}&zoom=19&size=600x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-            setStaticMapUrl(mapUrl);
-          }
-        });
+        const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${newCoordinates.lat},${newCoordinates.lng}&zoom=19&size=600x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+        setStaticMapUrl(mapUrl);
       }
-    }).catch(error => console.error('Error loading Google Maps script:', error));
-  }, []);
-
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      const companiesSnapshot = await getDocs(collection(db, 'companies'));
-      const companiesList = companiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCompanies(companiesList);
-    };
-
-    if (!companyId) {
-      fetchCompanies();
     }
-  }, [companyId]);
+  };
 
   const calculateTotalCost = () => {
     const areaSqFt = roofData.areaMeters2 * 10.7639;
@@ -158,7 +127,7 @@ const EstimatorSection = () => {
     };
 
     try {
-      await addDoc(collection(db, `companies/${companyId}/submissions`), submission);
+      await addDoc(collection(db, `companies/${user.uid}/submissions`), submission);
       alert('Submission saved successfully!');
       setStep(5); // Move to the next step to display the estimate
     } catch (error) {
@@ -171,38 +140,26 @@ const EstimatorSection = () => {
   const prevStep = () => setStep(step - 1);
 
   return (
-    <section className={`${styles.estimatorSection}`} data-company-id={companyId} id="estimator-section">
+    <section className={`${styles.estimatorSection}`}>
       <div className={styles.container}>
         <h1 className={styles.title}>Instant Roof Estimate</h1>
-        {!companyId && (
-          <div>
-            <label htmlFor="company-select" className="block text-lg font-medium text-gray-700 mb-2">
-              Select Company
-            </label>
-            <select
-              id="company-select"
-              name="company"
-              value={selectedCompany}
-              onChange={(e) => setSelectedCompany(e.target.value)}
-              className="mb-4 block w-full p-2 border border-gray-300 rounded-md"
-            >
-              <option value="" disabled>Select a company...</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>
-                  {company.companyName}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         {step === 1 && (
           <div>
-            <input
-              ref={autocompleteRef}
-              type="text"
-              placeholder="Enter your address"
-              className={`${styles.inputAddress} mb-4`}
-            />
+            <LoadScript
+              googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+              libraries={libraries}
+            >
+              <Autocomplete
+                onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
+                onPlaceChanged={onPlaceChanged}
+              >
+                <input
+                  type="text"
+                  placeholder="Enter your address"
+                  className={`${styles.inputAddress} mb-4`}
+                />
+              </Autocomplete>
+            </LoadScript>
             <button onClick={nextStep} className={styles.button}>
               Next
             </button>

@@ -6,6 +6,7 @@ import { auth, db } from '../firebaseConfig';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, doc, setDoc } from 'firebase/firestore';
+import Image from 'next/image';
 
 const SignupForm = () => {
   const [email, setEmail] = useState('');
@@ -127,14 +128,10 @@ const SignupForm = () => {
           </div>
         </form>
         <div className="text-center">
-        <button onClick={handleGoogleSignIn} className="flex items-center justify-center w-full h-12 px-4 py-2 mt-4 text-white bg-black rounded hover:bg-red-600">
-          <Link href="/your-desired-path">
-            <a>
-              <image src="/assets/Google.png" alt="Google" width={40} height={40} />
-            </a>
-          </Link>
-          Sign up with Google
-        </button>
+          <button onClick={handleGoogleSignIn} className="flex items-center justify-center w-full h-12 px-4 py-2 mt-4 text-white bg-black rounded hover:bg-red-600">
+            <Image src="/assets/Google.png" alt="Google" width={40} height={40} />
+            Sign up with Google
+          </button>
           <Link href="/login" className="block mt-4 text-blue-500 hover:underline">Already have an account? Log in</Link>
         </div>
       </div>

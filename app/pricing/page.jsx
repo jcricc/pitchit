@@ -1,5 +1,12 @@
+"use client";
+
 import React from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import CheckoutForm from '../components/CheckoutForm';
 import Header from '../components/Header';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY);
 
 const PricingPage = () => (
     <div>
@@ -21,12 +28,14 @@ const PricingPage = () => (
         <li className="mb-2">Easy-to-read report</li>
       </ul>
       <p className="text-2xl font-bold mt-4">$5 per report</p>
-      <button className="px-6 py-3 bg-blue-500 text-white rounded mt-4 hover:bg-blue-600 transition duration-300">Buy Now</button>
+      <Elements stripe={stripePromise}>
+        <CheckoutForm product={{ name: 'Instant Roof Report', price: 500 }} />
+      </Elements>
     </section>
 
     <section className="mb-12">
       <h2 className="text-3xl font-semibold mb-4">Instant Estimates Subscription</h2>
-      <p className="text-lg text-gray-700 mb-4">
+      <p className="text-lg text-gray-300 mb-4">
         Subscribe to our instant estimates plan and receive a set number of leads each month.
       </p>
 
@@ -40,12 +49,14 @@ const PricingPage = () => (
           <li className="mb-2">Priority support</li>
         </ul>
         <p className="text-2xl font-bold mt-4">$25/month</p>
-        <button className="px-6 py-3 bg-blue-500 text-white rounded mt-4 hover:bg-blue-600 transition duration-300">Subscribe</button>
+        <Elements stripe={stripePromise}>
+          <CheckoutForm product={{ name: 'Basic Plan', price: 2500, subscription: true }} />
+        </Elements>
       </div>
 
       <div>
         <h3 className="text-2xl font-bold mb-2">Pro Plan</h3>
-        <p className="text-lg text-gray-700 mb-4">
+        <p className="text-lg text-gray-300 mb-4">
           Receive up to 200 leads per month.
         </p>
         <ul className="list-disc list-inside text-lg text-gray-300">
@@ -53,11 +64,13 @@ const PricingPage = () => (
           <li className="mb-2">Priority support</li>
         </ul>
         <p className="text-2xl font-bold mt-4">$50/month</p>
-        <button className="px-6 py-3 bg-blue-500 text-white rounded mt-4 hover:bg-blue-600 transition duration-300">Subscribe</button>
+        <Elements stripe={stripePromise}>
+          <CheckoutForm product={{ name: 'Pro Plan', price: 5000, subscription: true }} />
+        </Elements>
       </div>
     </section>
   </div>
-</div>
+    </div>
 );
 
 export default PricingPage;

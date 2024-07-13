@@ -13,7 +13,16 @@ export const loadGoogleMapsScript = () => {
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
+      console.error('Google Maps API key is missing');
       reject(new Error('Google Maps API key is missing'));
+      return;
+    }
+
+    // Check if the script already exists
+    const existingScript = document.querySelector(`script[src="https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places"]`);
+    if (existingScript) {
+      googleMapsScriptLoaded = true;
+      resolve();
       return;
     }
 
@@ -25,7 +34,10 @@ export const loadGoogleMapsScript = () => {
       googleMapsScriptLoaded = true;
       resolve();
     };
-    script.onerror = reject;
+    script.onerror = (error) => {
+      console.error('Error loading Google Maps script:', error);
+      reject(new Error('Failed to load Google Maps script'));
+    };
     document.head.appendChild(script);
   });
 

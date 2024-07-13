@@ -3,35 +3,41 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
-import { loadGoogleMapsScript } from '../utils/loadGoogleMapsScript';
 import styles from './HeroSection.module.css';
+import { loadGoogleMapsScript } from '../utils/loadGoogleMapsScript';
 
 const HeroSection = () => {
   const [address, setAddress] = useState('');
   const [coordinates, setCoordinates] = useState(null);
   const [solarData, setSolarData] = useState(null);
   const [aerialImageUrl, setAerialImageUrl] = useState('');
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    loadGoogleMapsScript().then(() => {
-      if (inputRef.current) {
-        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          fields: ['geometry', 'name', 'formatted_address'],
-        });
+    loadGoogleMapsScript()
+      .then(() => {
+        setIsScriptLoaded(true);
+        if (inputRef.current) {
+          const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+            fields: ['geometry', 'name', 'formatted_address']
+          });
 
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          if (place && place.formatted_address) {
-            setAddress(place.formatted_address);
-            setCoordinates({
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-            });
-          }
-        });
-      }
-    }).catch(error => console.error('Error loading Google Maps script:', error));
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place && place.formatted_address) {
+              setAddress(place.formatted_address);
+              setCoordinates({
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng()
+              });
+            }
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Google Maps script failed to load:', error);
+      });
   }, []);
 
   const handleGenerateReport = async () => {
@@ -41,27 +47,30 @@ const HeroSection = () => {
     }
 
     try {
-      const geocodeResponse = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json`, {
+      const geocodeResponse = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
         params: {
           address: address,
-          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-        },
+          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        }
       });
 
       if (geocodeResponse.data.status === 'OK') {
         const location = geocodeResponse.data.results[0].geometry.location;
         setCoordinates(location);
 
+        console.log('Requesting solar data for coordinates:', location);
+
         const solarResponse = await axios.get('/api/solar', {
           params: {
             lat: location.lat,
-            lng: location.lng,
-          },
+            lng: location.lng
+          }
         });
 
         if (solarResponse.data && solarResponse.data.solarPotential && solarResponse.data.solarPotential.roofSegmentStats) {
           setSolarData(solarResponse.data);
 
+          // Generate Static Map URL with increased size and zoom level
           const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=700x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
           setAerialImageUrl(staticMapUrl);
         } else {
@@ -75,20 +84,39 @@ const HeroSection = () => {
     }
   };
 
-  const convertMetersToFeet = (areaMeters2) => (areaMeters2 * 10.7639).toFixed(2);
-  const calculateRoofSquares = (areaMeters2) => (areaMeters2 * 10.7639 / 100).toFixed(2);
-  const calculatePitch = (pitchDegrees) => Math.round(Math.tan(pitchDegrees * (Math.PI / 180)) * 12);
+  const handleUploadBlueprint = () => {
+    console.log('Upload blueprint clicked');
+  };
+
+  // Helper Functions
+  const convertMetersToFeet = (areaMeters2) => {
+    return (areaMeters2 * 10.7639).toFixed(2);
+  };
+
+  const calculateRoofSquares = (areaMeters2) => {
+    const areaFeet2 = areaMeters2 * 10.7639;
+    return (areaFeet2 / 100).toFixed(2);
+  };
+
+  const calculatePitch = (pitchDegrees) => {
+    const slope = Math.tan(pitchDegrees * (Math.PI / 180));
+    const rise = slope * 12;
+    return Math.round(rise); // Round to the nearest integer
+  };
+
   const calculateRafterLength = (pitchDegrees, groundAreaMeters2, widthMeters) => {
     const slope = Math.tan(pitchDegrees * (Math.PI / 180));
-    const run = groundAreaMeters2 / widthMeters;
+    const run = Math.sqrt(groundAreaMeters2 / widthMeters); // Adjusted calculation
     const rise = slope * run;
     return Math.sqrt(run ** 2 + rise ** 2).toFixed(2);
   };
-  const calculateMaterials = (squares) => ({
-    shinglesBundles: (squares * 3 * 1.1).toFixed(0),
-    underlaymentRolls: (squares / 4).toFixed(0),
-    nails: (squares * 320).toFixed(0),
-  });
+
+  const calculateMaterials = (squares) => {
+    const shinglesBundles = (squares * 3 * 1.1).toFixed(0); // Including 10% waste
+    const underlaymentRolls = (squares / 4).toFixed(0);
+    const nails = (squares * 320).toFixed(0);
+    return { shinglesBundles, underlaymentRolls, nails };
+  };
 
   return (
     <section className={`${styles.heroSection} bg-cover bg-center py-20`}>
@@ -116,13 +144,15 @@ const HeroSection = () => {
         {solarData && (
           <div className="mt-12 p-8 border border-gray-500 rounded-md bg-white text-black shadow-lg max-w-4xl mx-auto relative">
             <h2 className="text-2xl font-semibold text-center">Roof Measurement Results</h2>
-            <Image
-              src="/assets/PitchItLogo.png"
-              alt="Logo"
-              width={250}
-              height={250}
-              className="absolute top-[-2rem] right-[-2rem]"
-            />
+            {isScriptLoaded && (
+              <Image
+                src="/assets/PitchItLogo.png"
+                alt="Logo"
+                width={250}
+                height={250}
+                className="absolute top-[-2rem] right-[-2rem]"
+              />
+            )}
             <div className={styles.locationBox}>
               <p className="text-lg font-semibold">{address}</p>
             </div>
@@ -134,21 +164,29 @@ const HeroSection = () => {
                   <table className={styles.table}>
                     <thead className={styles.thead}>
                       <tr>
-                        <th className={styles.th}>Roof</th>
-                        <th className={styles.th}>Total Area (ft²)</th>
-                        <th className={styles.th}>Ground Area (ft²)</th>
-                        <th className={styles.th}>Total Squares</th>
-                        <th className={styles.th}>Pitch</th>
-                        <th className={styles.th}># Facets</th>
+                        <th className={styles.th}>Metric</th>
+                        <th className={styles.th}>Value</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className={styles.td}>#1</td>
+                        <td className={styles.td}>Total Area (ft²)</td>
                         <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
+                      </tr>
+                      <tr>
+                        <td className={styles.td}>Ground Area (ft²)</td>
                         <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.wholeRoofStats.groundAreaMeters2)}</td>
+                      </tr>
+                      <tr>
+                        <td className={styles.td}>Total Squares</td>
                         <td className={styles.td}>{calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
+                      </tr>
+                      <tr>
+                        <td className={styles.td}>Pitch</td>
                         <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
+                      </tr>
+                      <tr>
+                        <td className={styles.td}># Facets</td>
                         <td className={styles.td}>{solarData.solarPotential.roofSegmentStats.length}</td>
                       </tr>
                     </tbody>
