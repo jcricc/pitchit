@@ -164,7 +164,7 @@ const HeroSection = () => {
                 alt="Logo"
                 width={250}
                 height={250}
-                className="absolute top-[-2rem] right-[-2rem]"
+                className="logo-image"
               />
             )}
             <div className={styles.locationBox}>
