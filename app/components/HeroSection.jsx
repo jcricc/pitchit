@@ -70,18 +70,32 @@ const HeroSection = () => {
         if (solarResponse.data && solarResponse.data.solarPotential && solarResponse.data.solarPotential.roofSegmentStats) {
           setSolarData(solarResponse.data);
 
-          // Generate Static Map URL with increased size and zoom level
-          const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=700x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-          setAerialImageUrl(staticMapUrl);
-        } else {
-          console.error('Invalid data format received from solar API');
+          const highQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=400x500&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+        
+        // Generate Static Map URL for medium-quality image
+        const mediumQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=18&size=400x500&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+        
+        // Try to fetch the high-quality image first
+        try {
+          const highQualityResponse = await axios.get(highQualityUrl);
+          if (highQualityResponse.status === 200) {
+            setAerialImageUrl(highQualityUrl);
+          } else {
+            throw new Error('High-quality image not available');
+          }
+        } catch (error) {
+          console.error('High-quality image not available, falling back to medium quality', error);
+          setAerialImageUrl(mediumQualityUrl);
         }
       } else {
-        console.error('Geocoding API error:', geocodeResponse.data.status);
+        console.error('Invalid data format received from solar API');
       }
-    } catch (error) {
-      console.error('Error fetching geocoding or solar data:', error);
+    } else {
+      console.error('Geocoding API error:', geocodeResponse.data.status);
     }
+  } catch (error) {
+    console.error('Error fetching geocoding or solar data:', error);
+  }
   };
 
   const handleUploadBlueprint = () => {
