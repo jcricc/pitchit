@@ -11,13 +11,11 @@ const HeroSection = () => {
   const [coordinates, setCoordinates] = useState(null);
   const [solarData, setSolarData] = useState(null);
   const [aerialImageUrl, setAerialImageUrl] = useState('');
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
     loadGoogleMapsScript()
       .then(() => {
-        setIsScriptLoaded(true);
         if (inputRef.current) {
           const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
             fields: ['geometry', 'name', 'formatted_address']
@@ -70,32 +68,32 @@ const HeroSection = () => {
         if (solarResponse.data && solarResponse.data.solarPotential && solarResponse.data.solarPotential.roofSegmentStats) {
           setSolarData(solarResponse.data);
 
-          const highQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=400x500&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+          const highQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=800x800&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
         
-        // Generate Static Map URL for medium-quality image
-        const mediumQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=18&size=400x500&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+          // Generate Static Map URL for medium-quality image
+          const mediumQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=18&size=400x400&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
         
-        // Try to fetch the high-quality image first
-        try {
-          const highQualityResponse = await axios.get(highQualityUrl);
-          if (highQualityResponse.status === 200) {
-            setAerialImageUrl(highQualityUrl);
-          } else {
-            throw new Error('High-quality image not available');
+          // Try to fetch the high-quality image first
+          try {
+            const highQualityResponse = await axios.get(highQualityUrl);
+            if (highQualityResponse.status === 200) {
+              setAerialImageUrl(highQualityUrl);
+            } else {
+              throw new Error('High-quality image not available');
+            }
+          } catch (error) {
+            console.error('High-quality image not available, falling back to medium quality', error);
+            setAerialImageUrl(mediumQualityUrl);
           }
-        } catch (error) {
-          console.error('High-quality image not available, falling back to medium quality', error);
-          setAerialImageUrl(mediumQualityUrl);
+        } else {
+          console.error('Invalid data format received from solar API');
         }
       } else {
-        console.error('Invalid data format received from solar API');
+        console.error('Geocoding API error:', geocodeResponse.data.status);
       }
-    } else {
-      console.error('Geocoding API error:', geocodeResponse.data.status);
+    } catch (error) {
+      console.error('Error fetching geocoding or solar data:', error);
     }
-  } catch (error) {
-    console.error('Error fetching geocoding or solar data:', error);
-  }
   };
 
   const handleUploadBlueprint = () => {
@@ -136,9 +134,7 @@ const HeroSection = () => {
     <section className={`${styles.heroSection} bg-cover bg-center py-20`}>
       <div className={`${styles.container} text-center text-white`}>
         <h1 className="text-blue-400 text-6xl font-bold">Let&apos;s get started.</h1>
-        <p className="text-gray-300 text-2xl mt-4">
-          Enter the address or coordinates of a structure you&apos;d like to measure.
-        </p>
+        <p className="text-gray-300 text-2xl mt-4">Enter the address or coordinates of a structure you&apos;d like to measure.</p>
         <div className="mt-4 flex justify-center space-x-4" id="place-picker-box">
           <div id="place-picker-container" className="w-80 text-left">
             <input
@@ -158,15 +154,13 @@ const HeroSection = () => {
         {solarData && (
           <div className="mt-12 p-8 border border-gray-500 rounded-md bg-white text-black shadow-lg max-w-4xl mx-auto relative">
             <h2 className="text-2xl font-semibold text-center">Roof Measurement Results</h2>
-            {isScriptLoaded && (
-              <Image
-                src="/assets/PitchItLogo.png"
-                alt="Logo"
-                width={250}
-                height={250}
-                className="logo-image"
-              />
-            )}
+            <Image
+              src="/assets/PitchItLogo.png"
+              alt="Logo"
+              width={250}
+              height={250}
+              className="absolute top-[-2rem] right-[-2rem]"
+            />
             <div className={styles.locationBox}>
               <p className="text-lg font-semibold">{address}</p>
             </div>
