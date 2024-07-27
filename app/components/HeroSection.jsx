@@ -5,12 +5,13 @@ import Image from 'next/image';
 import axios from 'axios';
 import styles from './HeroSection.module.css';
 import { loadGoogleMapsScript } from '../utils/loadGoogleMapsScript';
+import * as turf from '@turf/turf';
 
 const HeroSection = () => {
   const [address, setAddress] = useState('');
   const [coordinates, setCoordinates] = useState(null);
-  const [solarData, setSolarData] = useState(null);
   const [aerialImageUrl, setAerialImageUrl] = useState('');
+  const [buildingData, setBuildingData] = useState([]);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -44,90 +45,149 @@ const HeroSection = () => {
       return;
     }
 
+    if (!coordinates) {
+      console.error('Coordinates not available');
+      return;
+    }
+
     try {
-      const geocodeResponse = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-        params: {
-          address: address,
-          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      const state = await getStateFromCoordinates(coordinates.lat, coordinates.lng);
+      const geojsonUrl = `https://storage.googleapis.com/usbuildings/usbuildings/${state}.geojson`;
+
+      let geojsonData;
+      try {
+        const geojsonResponse = await axios.get(geojsonUrl);
+        geojsonData = geojsonResponse.data;
+
+        if (!geojsonData || geojsonData.type !== 'FeatureCollection' || !Array.isArray(geojsonData.features)) {
+          throw new Error('Invalid GeoJSON data');
         }
+      } catch (error) {
+        console.error('GeoJSON data not found or invalid, fetching data from Solar API', error);
+        geojsonData = null;
+      }
+
+      let closeFeatures = [];
+      if (geojsonData) {
+        closeFeatures = findCloseFeatures(geojsonData, coordinates);
+      }
+
+      if (closeFeatures.length === 0) {
+        const solarData = await fetchSolarData(coordinates.lat, coordinates.lng);
+        if (solarData) {
+          closeFeatures = solarData.solarPotential.roofSegmentStats.map(segment => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [segment.boundingBox.sw.longitude, segment.boundingBox.sw.latitude],
+                  [segment.boundingBox.ne.longitude, segment.boundingBox.sw.latitude],
+                  [segment.boundingBox.ne.longitude, segment.boundingBox.ne.latitude],
+                  [segment.boundingBox.sw.longitude, segment.boundingBox.ne.latitude],
+                  [segment.boundingBox.sw.longitude, segment.boundingBox.sw.latitude]
+                ]
+              ]
+            },
+            properties: {
+              areaMeters2: segment.stats.areaMeters2,
+              pitchDegrees: segment.pitchDegrees,
+            }
+          }));
+        }
+      }
+
+      if (closeFeatures.length === 0) {
+        throw new Error('No data found for the given address.');
+      }
+
+      const buildingInfoPromises = closeFeatures.map(async feature => {
+        const area = calculateArea(feature);
+        const pitch = feature.properties.pitchDegrees;
+        console.log('Feature pitch:', pitch);  // Debug statement
+        return { feature, area, pitch };
       });
 
-      if (geocodeResponse.data.status === 'OK') {
-        const location = geocodeResponse.data.results[0].geometry.location;
-        setCoordinates(location);
+      const buildingInfo = await Promise.all(buildingInfoPromises);
+      console.log('Building Info:', buildingInfo);  // Debug statement
+      setBuildingData(buildingInfo);
 
-        console.log('Requesting solar data for coordinates:', location);
+      const path = generatePathParameter(closeFeatures);
 
-        const solarResponse = await axios.get('/api/solar', {
-          params: {
-            lat: location.lat,
-            lng: location.lng
-          }
-        });
+      const highQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=19&size=400x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&path=weight:2|color:red|${path}`;
+      const mediumQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=18&size=400x700&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&path=weight:2|color:red|${path}`;
 
-        if (solarResponse.data && solarResponse.data.solarPotential && solarResponse.data.solarPotential.roofSegmentStats) {
-          setSolarData(solarResponse.data);
-
-          const highQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=19&size=800x800&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-        
-          // Generate Static Map URL for medium-quality image
-          const mediumQualityUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${location.lat},${location.lng}&zoom=18&size=400x400&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-        
-          // Try to fetch the high-quality image first
-          try {
-            const highQualityResponse = await axios.get(highQualityUrl);
-            if (highQualityResponse.status === 200) {
-              setAerialImageUrl(highQualityUrl);
-            } else {
-              throw new Error('High-quality image not available');
-            }
-          } catch (error) {
-            console.error('High-quality image not available, falling back to medium quality', error);
-            setAerialImageUrl(mediumQualityUrl);
-          }
+      try {
+        const highQualityResponse = await axios.get(highQualityUrl);
+        if (highQualityResponse.status === 200) {
+          setAerialImageUrl(highQualityUrl);
         } else {
-          console.error('Invalid data format received from solar API');
+          throw new Error('High-quality image not available');
         }
-      } else {
-        console.error('Geocoding API error:', geocodeResponse.data.status);
+      } catch (error) {
+        console.error('High-quality image not available, falling back to medium quality', error);
+        setAerialImageUrl(mediumQualityUrl);
       }
     } catch (error) {
-      console.error('Error fetching geocoding or solar data:', error);
+      console.error('Error fetching or processing data:', error);
     }
   };
 
-  const handleUploadBlueprint = () => {
-    console.log('Upload blueprint clicked');
+  const getStateFromCoordinates = async (lat, lng) => {
+    const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+    const response = await axios.get(geocodingUrl);
+    const result = response.data.results.find(result =>
+      result.types.includes('administrative_area_level_1')
+    );
+    return result ? result.address_components[0].long_name.replace(/\s/g, '') : null;
   };
 
-  // Helper Functions
-  const convertMetersToFeet = (areaMeters2) => {
-    return (areaMeters2 * 10.7639).toFixed(2);
+  const findCloseFeatures = (geojsonData, coordinates) => {
+    const point = turf.point([coordinates.lng, coordinates.lat]);
+    return geojsonData.features.filter(feature => {
+      try {
+        const polygon = turf.polygon(feature.geometry.coordinates);
+        const centroid = turf.centroid(polygon);
+        const distance = turf.distance(point, centroid, { units: 'meters' });
+        return distance < 50;
+      } catch (error) {
+        console.error('Error processing feature:', feature, error);
+        return false;
+      }
+    });
   };
 
-  const calculateRoofSquares = (areaMeters2) => {
-    const areaFeet2 = areaMeters2 * 10.7639;
-    return (areaFeet2 / 100).toFixed(2);
+  const calculateArea = (feature) => {
+    try {
+      const polygon = turf.polygon(feature.geometry.coordinates);
+      const area = turf.area(polygon);
+      return (area * 10.764).toFixed(2);
+    } catch (error) {
+      console.error('Error calculating area for feature:', feature, error);
+      return 0;
+    }
+  };
+
+  const fetchSolarData = async (lat, lng) => {
+    try {
+      const response = await axios.get(`/api/solar?lat=${lat}&lng=${lng}`);
+      const solarData = response.data.solarPotential.roofSegmentStats;
+      return solarData;
+    } catch (error) {
+      console.error('Error fetching solar data:', error);
+      return null;
+    }
+  };
+
+  const generatePathParameter = (features) => {
+    return features.flatMap(feature =>
+      feature.geometry.coordinates[0].map(coord => `${coord[1]},${coord[0]}`)
+    ).join('|');
   };
 
   const calculatePitch = (pitchDegrees) => {
-    const slope = Math.tan(pitchDegrees * (Math.PI / 180));
-    const rise = slope * 12;
-    return Math.round(rise); // Round to the nearest integer
-  };
-
-  const calculateRafterLength = (pitchDegrees, groundAreaMeters2, widthMeters) => {
-    const slope = Math.tan(pitchDegrees * (Math.PI / 180));
-    const run = Math.sqrt(groundAreaMeters2 / widthMeters); // Adjusted calculation
-    const rise = slope * run;
-    return Math.sqrt(run ** 2 + rise ** 2).toFixed(2);
-  };
-
-  const calculateMaterials = (squares) => {
-    const shinglesBundles = (squares * 3 * 1.1).toFixed(0); // Including 10% waste
-    const underlaymentRolls = (squares / 4).toFixed(0);
-    const nails = (squares * 320).toFixed(0);
-    return { shinglesBundles, underlaymentRolls, nails };
+    const rise = Math.tan(pitchDegrees * (Math.PI / 180)) * 12;
+    return Math.round(rise);
   };
 
   return (
@@ -142,6 +202,8 @@ const HeroSection = () => {
               type="text"
               placeholder="Enter Address"
               className={`${styles.inputAddress} py-2 px-4 w-full border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-800 text-black`}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
             />
           </div>
           <button
@@ -151,7 +213,7 @@ const HeroSection = () => {
             SEARCH ADDRESS
           </button>
         </div>
-        {solarData && (
+        {buildingData.length > 0 && (
           <div className="mt-12 p-8 border border-gray-500 rounded-md bg-white text-black shadow-lg max-w-4xl mx-auto relative">
             <h2 className="text-2xl font-semibold text-center">Roof Measurement Results</h2>
             <Image
@@ -166,112 +228,14 @@ const HeroSection = () => {
             </div>
             <p className={styles.coordinates}>Latitude: {coordinates.lat}, Longitude: {coordinates.lng}</p>
             <div className="w-full text-left space-y-8 mt-8">
-              {solarData.solarPotential.wholeRoofStats && (
-                <div className="text-center">
-                  <h3 className="text-lg font-bold">Whole Roof Stats</h3>
-                  <table className={styles.table}>
-                    <thead className={styles.thead}>
-                      <tr>
-                        <th className={styles.th}>Metric</th>
-                        <th className={styles.th}>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className={styles.td}>Total Area (ft²)</td>
-                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
-                      </tr>
-                      <tr>
-                        <td className={styles.td}>Ground Area (ft²)</td>
-                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.wholeRoofStats.groundAreaMeters2)}</td>
-                      </tr>
-                      <tr>
-                        <td className={styles.td}>Total Squares</td>
-                        <td className={styles.td}>{calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2)}</td>
-                      </tr>
-                      <tr>
-                        <td className={styles.td}>Pitch</td>
-                        <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
-                      </tr>
-                      <tr>
-                        <td className={styles.td}># Facets</td>
-                        <td className={styles.td}>{solarData.solarPotential.roofSegmentStats.length}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+              {buildingData.map((data, index) => (
+                <div key={index} className="text-center">
+                  <h3 className="text-lg font-bold">Building {index + 1} Footprint Area</h3>
+                  <p>Area: {data.area} ft²</p>
+                  <p>Roof Pitch: {data.pitch ? `${calculatePitch(data.pitch)} /12` : 'N/A'}</p>
+                  <p>Total Squares: {(data.area / 100).toFixed(2)} squares</p>
                 </div>
-              )}
-              {solarData.solarPotential.roofSegmentStats[0] && (
-                <div className="text-center">
-                  <h3 className="text-lg font-bold">Main Roof Segment Stats</h3>
-                  <table className={styles.table}>
-                    <thead className={styles.thead}>
-                      <tr>
-                        <th className={styles.th}>Metric</th>
-                        <th className={styles.th}>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className={styles.td}>Pitch</td>
-                        <td className={styles.td}>{calculatePitch(solarData.solarPotential.roofSegmentStats[0].pitchDegrees)}/12</td>
-                      </tr>
-                      <tr>
-                        <td className={styles.td}>Area (ft²)</td>
-                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.roofSegmentStats[0].stats.areaMeters2)}</td>
-                      </tr>
-                      <tr>
-                        <td className={styles.td}>Ground Area (ft²)</td>
-                        <td className={styles.td}>{convertMetersToFeet(solarData.solarPotential.roofSegmentStats[0].stats.groundAreaMeters2)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {solarData.solarPotential.wholeRoofStats && (
-                <div className="text-center">
-                  <h3 className="text-lg font-bold">Materials Estimation</h3>
-                  <table className={styles.table}>
-                    <thead className={styles.thead}>
-                      <tr>
-                        <th className={styles.th}>Material</th>
-                        <th className={styles.th}>Quantity</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const squares = calculateRoofSquares(solarData.solarPotential.wholeRoofStats.areaMeters2);
-                        const materials = calculateMaterials(squares);
-                        const rafterLength = calculateRafterLength(
-                          solarData.solarPotential.roofSegmentStats[0].pitchDegrees,
-                          solarData.solarPotential.roofSegmentStats[0].stats.areaMeters2,
-                          solarData.solarPotential.roofSegmentStats[0].stats.groundAreaMeters2
-                        );
-                        return (
-                          <>
-                            <tr>
-                              <td className={styles.td}>Shingles Needed</td>
-                              <td className={styles.td}>{materials.shinglesBundles} bundles</td>
-                            </tr>
-                            <tr>
-                              <td className={styles.td}>Underlayment Needed</td>
-                              <td className={styles.td}>{materials.underlaymentRolls} rolls</td>
-                            </tr>
-                            <tr>
-                              <td className={styles.td}>Total Nails</td>
-                              <td className={styles.td}>{materials.nails} nails</td>
-                            </tr>
-                            <tr>
-                              <td className={styles.td}>Rafter Length</td>
-                              <td className={styles.td}>{rafterLength} feet</td>
-                            </tr>
-                          </>
-                        );
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              ))}
             </div>
             <div className="mt-8 text-center">
               <h3 className="text-lg font-bold">Aerial Image</h3>
